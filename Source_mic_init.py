@@ -16,12 +16,14 @@ c = 343
 
 ###Geometry setup
 #mics in front of the table
+# [x, y]
 mic_d = 0.3
 mics = np.array([
     [mic_d, 0],
     [0, 0],
-    [-mic_d,0]
+    [-mic_d, 0]
     ])
+mics_phi = 2*np.pi/360*np.array([0, 0, 0])
 
 #Rectangle room 7 m x 4.6 m
 room_d1 = 5
@@ -129,6 +131,35 @@ def compute_delay(mic_coordinates, source_coordinates, c):
     p_delay = 2*np.pi*30*t_delay
     return t_delay, p_delay
 
+
+def compute_angle(mic_coordinates, source_coordinates):
+    """
+    Parameters
+    ----------
+    mic_coordinates
+        Coordinates of the microphone [x,y]
+
+    source_coordinates
+        Coordinates of the source [x,y]
+
+    Returns
+    -------
+    phi
+        Angle from x axis to line between mic and source
+
+    """
+    phi = np.arctan2((source_coordinates[1] - mic_coordinates[1]), (source_coordinates[0] - mic_coordinates[0]))
+    return phi
+
+def directivity_gain(angle):
+    """
+    :param angle: angle from front of microphone (cardioid) [rad]
+    :return: gain for sound from this direction [0-1]
+    """
+    return 0.5*(1 + np.cos(angle))
+
+
+
 ###Calculated delay, axis=0 is the specific microphone, axis=1 is the specific source, t_delay is the time delay, p_delay is the phase delay
 t_delay = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
 p_delay = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
@@ -144,7 +175,7 @@ s_delay = np.rint(t_delay*fs)
 speech_data_for_mics = np.zeros((np.size(mics,axis=0),np.size(sources,axis=0),np.size(speech_data,axis=0)+int(s_delay.max())))
 for i in range(0, np.size(speech_data_for_mics,axis=0)):
     for j in range(0, np.size(speech_data_for_mics,axis=1)):
-            speech_data_for_mics[i,j,int(s_delay[i,j]):np.size(speech_data, axis=0)+int(s_delay[i,j])] += speech_data
+        speech_data_for_mics[i,j,int(s_delay[i,j]):np.size(speech_data, axis=0)+int(s_delay[i,j])] += speech_data * directivity_gain(compute_angle(mics[i], sources[j]) + mics_phi[i])
 
 ##Plot example of a specific signal in a microphone
 fig, ax2 = plt.subplots(figsize=(10, 8))
