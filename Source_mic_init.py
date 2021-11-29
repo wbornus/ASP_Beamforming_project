@@ -16,7 +16,7 @@ c = 343
 
 ###Geometry setup
 #mics in front of the table
-mic_d = 0.05
+mic_d = 0.3
 mics = np.array([
     [mic_d, 0],
     [0, 0],
@@ -129,7 +129,7 @@ def compute_delay(mic_coordinates, source_coordinates, c):
     p_delay = 2*np.pi*30*t_delay
     return t_delay, p_delay
 
-#Calculated delay, axis=0 is the specific microphone, axis=1 is the specific source, t_delay is the time delay, p_delay is the phase delay
+###Calculated delay, axis=0 is the specific microphone, axis=1 is the specific source, t_delay is the time delay, p_delay is the phase delay
 t_delay = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
 p_delay = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
 for i in range(0,np.size(t_delay,axis=0)):
@@ -138,3 +138,20 @@ for i in range(0,np.size(t_delay,axis=0)):
 
 
 
+
+###Speech data for mics. axis=0 is the mic number, axis=1 is the source number, axis=2 is the sample number.
+s_delay = np.rint(t_delay*fs)
+speech_data_for_mics = np.zeros((np.size(mics,axis=0),np.size(sources,axis=0),np.size(speech_data,axis=0)+int(s_delay.max())))
+for i in range(0, np.size(speech_data_for_mics,axis=0)):
+    for j in range(0, np.size(speech_data_for_mics,axis=1)):
+            speech_data_for_mics[i,j,int(s_delay[i,j]):np.size(speech_data, axis=0)+int(s_delay[i,j])] += speech_data
+
+##Plot example of a specific signal in a microphone
+fig, ax2 = plt.subplots(figsize=(10, 8))
+ax2.plot(speech_data_for_mics[0,3,:],'r', label="mic=0, source=3, t_delay = " + str(t_delay[0,3]))
+ax2.plot(speech_data_for_mics[1,3,:],'b',label="mic=1, source=3, t_delay = " + str(t_delay[1,3]))
+ax2.set_title("Speech signal for two different mics")
+ax2.grid()
+ax2.legend()
+ax2.set_xlim([15600, 16100])
+plt.show()
