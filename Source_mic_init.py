@@ -122,19 +122,15 @@ def compute_delay_and_attenuation(mic_coordinates, source_coordinates, c):
     t_delay
         Time delay for a specific microphone and source [s]
 
-    p_delay
-        Phase delay for a specific microphone and source [rad]
-
     attenuation
         A linear scalar by which the signal should be attenuated after transmission through the medium. It assumes a 24-bit depth wave was used as the signal.
 
     """
     distance = np.sqrt((source_coordinates[0] - mic_coordinates[0])**2+(source_coordinates[1] - mic_coordinates[1])**2)
     t_delay = distance/c
-    p_delay = 2*np.pi*30*t_delay
     dB_attenuation = 10*np.log10(distance**2)
     attenuation = np.divide(2**24*10**(-dB_attenuation/20),2**24)
-    return t_delay, p_delay, attenuation
+    return t_delay, attenuation
 
 
 def compute_angle(mic_coordinates, source_coordinates):
@@ -167,11 +163,10 @@ def directivity_gain(angle):
 
 ###Calculated delay, axis=0 is the specific microphone, axis=1 is the specific source, t_delay is the time delay, p_delay is the phase delay
 t_delay = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
-p_delay = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
 attenuation = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
 for i in range(0,np.size(t_delay,axis=0)):
     for j in range(0,np.size(t_delay,axis=1)):
-        t_delay[i,j], p_delay[i,j], attenuation[i,j] = compute_delay_and_attenuation(mics[i],sources[j],c)
+        t_delay[i,j], attenuation[i,j] = compute_delay_and_attenuation(mics[i],sources[j],c)
 
 
 
