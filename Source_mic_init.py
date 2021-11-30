@@ -3,15 +3,15 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
 from scipy.io import wavfile
-from scipy.signal import firwin, lfilter
 
 #init values
+#Mowa.wav is 24-bit and is normalized to 0dBFS
 sample_rate_speech, speech_data = wavfile.read("recordings/mowa.wav")
+#computer_fan.wav is 24-bit and is normalized to -2dBFS
 sample_rate_noise, noise_data = wavfile.read("recordings/computer_fan.wav")
 fs = sample_rate_speech
 dt = 1/fs
 c = 343
-
 
 
 ###Geometry setup
@@ -66,45 +66,45 @@ sources = np.array([
 
 
 ###geometry visualization
-fig, ax1 = plt.subplots(figsize=(8, 8))
-source_labels = range(0,np.size(sources, axis=0))
-ax1.plot(mics[:, 0], mics[:, 1], 'ko', label='Microphones')
-for i in range(0,np.size(mics, axis=0)):
-    plt.annotate(i,
-        (mics[i, 0],mics[i, 1]),
-        textcoords="offset points", 
-        xytext=(0,-12), 
-        ha='center')
+# fig, ax1 = plt.subplots(figsize=(8, 8))
+# source_labels = range(0,np.size(sources, axis=0))
+# ax1.plot(mics[:, 0], mics[:, 1], 'ko', label='Microphones')
+# for i in range(0,np.size(mics, axis=0)):
+#     plt.annotate(i,
+#         (mics[i, 0],mics[i, 1]),
+#         textcoords="offset points", 
+#         xytext=(0,-12), 
+#         ha='center')
 
-ax1.plot(sources[0:7, 0], sources[0:7, 1], 'rx', label='Sources (seats)')
-for i in range(0,num_of_signal_sources+1):
-    plt.annotate(i,
-        (sources[i, 0],sources[i, 1]),
-        textcoords="offset points", 
-        xytext=(0,5), 
-        ha='center')
+# ax1.plot(sources[0:7, 0], sources[0:7, 1], 'rx', label='Sources (seats)')
+# for i in range(0,num_of_signal_sources+1):
+#     plt.annotate(i,
+#         (sources[i, 0],sources[i, 1]),
+#         textcoords="offset points", 
+#         xytext=(0,5), 
+#         ha='center')
 
-ax1.plot(sources[7, 0], sources[7, 1], 'kx', label='Sources (noise)')
-for i in range(num_of_signal_sources+1, num_of_signal_sources+num_of_noise_sources+1):
-    plt.annotate(i-num_of_signal_sources-1,
-        (sources[i, 0],sources[i, 1]),
-        textcoords="offset points", 
-        xytext=(0,5), 
-        ha='center')
+# ax1.plot(sources[7, 0], sources[7, 1], 'kx', label='Sources (noise)')
+# for i in range(num_of_signal_sources+1, num_of_signal_sources+num_of_noise_sources+1):
+#     plt.annotate(i-num_of_signal_sources-1,
+#         (sources[i, 0],sources[i, 1]),
+#         textcoords="offset points", 
+#         xytext=(0,5), 
+#         ha='center')
 
-ax1.add_patch(Rectangle((table_corners[0][0], table_corners[0][1]), table_d2, table_d1,color="brown", edgecolor="black",label='Table'))
-ax1.add_patch(Rectangle((room_corners[0][0], room_corners[0][1]), room_d2, room_d1,fill=False,edgecolor="black",label='Room'))
-ax1.grid()
-ax1.legend()
-ax1.set_xlim([-room_d2/2-0.7, room_d2/2+1])
-ax1.set_ylim([-mic_d_from_wall-0.7, room_d1+mic_d_from_wall+1])
-ax1.set_title("Geometry of the conference setup")
-plt.show()
+# ax1.add_patch(Rectangle((table_corners[0][0], table_corners[0][1]), table_d2, table_d1,color="brown", edgecolor="black",label='Table'))
+# ax1.add_patch(Rectangle((room_corners[0][0], room_corners[0][1]), room_d2, room_d1,fill=False,edgecolor="black",label='Room'))
+# ax1.grid()
+# ax1.legend()
+# ax1.set_xlim([-room_d2/2-0.7, room_d2/2+1])
+# ax1.set_ylim([-mic_d_from_wall-0.7, room_d1+mic_d_from_wall+1])
+# ax1.set_title("Geometry of the conference setup")
+# plt.show()
 
 
 
 ###Propagation of the sound wave
-def compute_delay(mic_coordinates, source_coordinates, c):
+def compute_delay_and_attenuation(mic_coordinates, source_coordinates, c):
     """
     Parameters
     ----------
@@ -125,11 +125,16 @@ def compute_delay(mic_coordinates, source_coordinates, c):
     p_delay
         Phase delay for a specific microphone and source [rad]
 
+    attenuation
+        A linear scalar by which the signal should be attenuated after transmission through the medium. It assumes a 24-bit depth wave was used as the signal.
+
     """
     distance = np.sqrt((source_coordinates[0] - mic_coordinates[0])**2+(source_coordinates[1] - mic_coordinates[1])**2)
     t_delay = distance/c
     p_delay = 2*np.pi*30*t_delay
-    return t_delay, p_delay
+    dB_attenuation = 10*np.log10(distance**2)
+    attenuation = np.divide(2**24*10**(-dB_attenuation/20),2**24)
+    return t_delay, p_delay, attenuation
 
 
 def compute_angle(mic_coordinates, source_coordinates):
@@ -163,26 +168,35 @@ def directivity_gain(angle):
 ###Calculated delay, axis=0 is the specific microphone, axis=1 is the specific source, t_delay is the time delay, p_delay is the phase delay
 t_delay = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
 p_delay = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
+attenuation = np.zeros(shape=(np.size(mics,axis=0), np.size(sources,axis=0)))
 for i in range(0,np.size(t_delay,axis=0)):
     for j in range(0,np.size(t_delay,axis=1)):
-        t_delay[i,j], p_delay[i,j] = compute_delay(mics[i],sources[j],c)
+        t_delay[i,j], p_delay[i,j], attenuation[i,j] = compute_delay_and_attenuation(mics[i],sources[j],c)
 
 
 
 
-###Speech data for mics. axis=0 is the mic number, axis=1 is the source number, axis=2 is the sample number.
+###Speech data for mics. axis=0 is the mic number, axis=1 is the source number, axis=2 is the sample number. Already attenuated.
 s_delay = np.rint(t_delay*fs)
 speech_data_for_mics = np.zeros((np.size(mics,axis=0),np.size(sources,axis=0),np.size(speech_data,axis=0)+int(s_delay.max())))
 for i in range(0, np.size(speech_data_for_mics,axis=0)):
     for j in range(0, np.size(speech_data_for_mics,axis=1)):
-        speech_data_for_mics[i,j,int(s_delay[i,j]):np.size(speech_data, axis=0)+int(s_delay[i,j])] += speech_data * directivity_gain(compute_angle(mics[i], sources[j]) + mics_phi[i])
+        speech_data_for_mics[i,j,int(s_delay[i,j]):np.size(speech_data, axis=0)+int(s_delay[i,j])] += attenuation[i,j]*speech_data * directivity_gain(compute_angle(mics[i], sources[j]) + mics_phi[i])
+
 
 ##Plot example of a specific signal in a microphone
-fig, ax2 = plt.subplots(figsize=(10, 8))
-ax2.plot(speech_data_for_mics[0,3,:],'r', label="mic=0, source=3, t_delay = " + str(t_delay[0,3]))
-ax2.plot(speech_data_for_mics[1,3,:],'b',label="mic=1, source=3, t_delay = " + str(t_delay[1,3]))
-ax2.set_title("Speech signal for two different mics")
-ax2.grid()
-ax2.legend()
-ax2.set_xlim([15600, 16100])
+# fig, ax2 = plt.subplots(figsize=(10, 8))
+# ax2.plot(speech_data_for_mics[0,3,:],'r', label="mic=0, source=3, t_delay = " + str(t_delay[0,3]))
+# ax2.plot(speech_data_for_mics[1,3,:],'b',label="mic=1, source=3, t_delay = " + str(t_delay[1,3]))
+# ax2.set_title("Speech signal for two different mics")
+# ax2.grid()
+# ax2.legend()
+# ax2.set_xlim([15600, 16100])
+# plt.show()
+
+##Plot Example of attenuation
+fig, ax3 = plt.subplots(figsize=(10, 8))
+ax3.plot(speech_data,'r', label="Source 3 signal (1 m away)")
+ax3.plot(speech_data_for_mics[1,3,:],'b',label="mic=1, source=3 (3.3 m away)")
+ax3.legend()
 plt.show()
