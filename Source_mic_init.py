@@ -103,7 +103,7 @@ ax1.set_title("Geometry of the conference setup")
 plt.show()
 
 #Generating impulse respons using RIR and convolving with the signal
-n_samples = 4096
+n_samples = 30000
 signal = np.zeros(shape=(np.size(speech_data,axis=0)+n_samples-1, 2, np.size(mics, axis=0), np.size(sources, axis=0)))
 for i in range(0,np.size(sources, axis=0)):
     h = rir.generate(
@@ -114,7 +114,8 @@ for i in range(0,np.size(sources, axis=0)):
             # Source position [x y z] (m)
         L=[room_d2, room_d1, room_d3],            # Room dimensions [x y z] (m)
         reverberation_time=0.6, # Reverberation time (s)
-        nsample=n_samples,           # Number of output samples
+        nsample=n_samples, # Number of output samples
+        order=5,           # order of reflections
     )
     # Convolve 2-channel signal with 3 impulse responses
     signal[:,:,:,i] = ss.convolve(h[:, None, :], speech_data[:, :, None])
