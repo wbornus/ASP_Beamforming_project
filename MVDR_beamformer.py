@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import rir_generator as rir
+
 
 
 def MVDR_beamformer(x, distances, phi,  fs):
@@ -51,19 +53,86 @@ def MVDR_beamformer(x, distances, phi,  fs):
     return out
 
 
+def polar_pattern(mics, angle):
+    """
+    :param mics: mics placements, should be in center of 5x5 room
+    :param angle: angle of looking [degrees]
+    :return out_power, theta: power vs angle
+    """
+
+    r = 2
+    height = 1.2
+    # rng = np.random.default_rng(1254)
+    # sig = rng.random(10000)
+    # test_signal = (sig - 0.5) * 2
+    Fs = 48000
+    distances = np.array([])
+    print(np.size(mics, axis=0))
+    for i in range(np.size(mics, axis=0)):
+        distances = np.append(distances, np.sqrt((mics[0][0] - mics[i][0])**2 + (mics[0][1] - mics[i][1])**2))
+    out_power = np.array([])
+    phi_out = np.array([])
+    for phi in np.linspace(0, np.pi*2, 200):
+        phi_out = np.append(phi_out, phi)
+        source = [r*np.cos(phi) + 2.5, r*np.sin(phi)+2.5, height]
+        # Generating impulse respons using RIR and convolving with the signal
+        n_samples = 3000
+        # signal = np.zeros(
+        #     shape=(np.size(test_signal, axis=0) + n_samples - 1, 2, np.size(mics, axis=0)))
+
+        h = rir.generate(
+            c=343,  # Sound velocity (m/s)
+            fs=Fs,  # Sample frequency (samples/s)
+            r=mics,
+            s=source,
+            # Source position [x y z] (m)
+            L=[5, 5, 3],  # Room dimensions [x y z] (m)
+            reverberation_time=0.6,  # Reverberation time (s)
+            nsample=n_samples,  # Number of output samples
+            order=0,  # order of reflections
+        )
+        power = np.sqrt(np.mean(MVDR_beamformer(h.T, distances, angle/360*2*np.pi, Fs)**2))
+        out_power = np.append(out_power, power)
+        print('angle: ', phi, power)
+
+    return out_power, phi_out
+
 # test
 # do usunięcia później
 
-rng = np.random.default_rng(1254)
-sig = rng.random(1000)
-sig = (sig-0.5)*2
-# plt.plot(sig)
+# rng = np.random.default_rng(1254)
+# sig = rng.random(1000)
+# sig = (sig-0.5)*2
+# # plt.plot(sig)
+# # plt.show()
+#
+# Sig = np.zeros([3, 1000])
+# for i in range(3):
+#     Sig[i, :] = (rng.random(1000)-0.5)*2
+#
+# y = MVDR_beamformer(Sig, [0, 0.2, 0.4], 0, 1/8000)
+# plt.plot(y)
 # plt.show()
 
-Sig = np.zeros([3, 1000])
-for i in range(3):
-    Sig[i, :] = (rng.random(1000)-0.5)*2
+room_d1 = 5
+room_d2 = 5
+room_d3 = 3
+mic_d_from_wall = 2.5
 
-y = MVDR_beamformer(Sig, [0, 0.2, 0.4], 0, 1/8000)
-plt.plot(y)
+#mics in front of the table
+# [x, y]
+mic_d = 0.3
+mic_h = 1.2
+mics = np.array([
+    [room_d2/2, mic_d+room_d1/2, mic_h],
+    [room_d2/2,  room_d1/2, mic_h],
+    [room_d2/2,  -mic_d+room_d1/2, mic_h]
+    ])
+
+[pattern, theta] = polar_pattern(mics, 90)
+# plt.plot(pattern)
+# plt.show()
+
+fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+ax.plot(theta+np.pi, 10*np.log10(pattern/np.max(pattern)))
 plt.show()
