@@ -55,28 +55,28 @@ def MVDR_beamformer(x, distances, phi,  fs):
 
 def polar_pattern(mics, angle):
     """
-    :param mics: mics placements, should be in center of 5x5 room
+    :param mics: mics placements, should be around center of 10x10 room
     :param angle: angle of looking [degrees]
     :return out_power, theta: power vs angle
     """
 
-    r = 2
+    r = 4
     height = 1.2
     # rng = np.random.default_rng(1254)
     # sig = rng.random(10000)
     # test_signal = (sig - 0.5) * 2
-    Fs = 48000
+    Fs = 22100
     distances = np.array([])
     print(np.size(mics, axis=0))
     for i in range(np.size(mics, axis=0)):
         distances = np.append(distances, np.sqrt((mics[0][0] - mics[i][0])**2 + (mics[0][1] - mics[i][1])**2))
     out_power = np.array([])
     phi_out = np.array([])
-    for phi in np.linspace(0, np.pi*2, 200):
+    for phi in np.linspace(0, np.pi*2, 1000):
         phi_out = np.append(phi_out, phi)
-        source = [r*np.cos(phi) + 2.5, r*np.sin(phi)+2.5, height]
+        source = [r*np.cos(phi) + 5, r*np.sin(phi)+5, height]
         # Generating impulse respons using RIR and convolving with the signal
-        n_samples = 3000
+        n_samples = 300
         # signal = np.zeros(
         #     shape=(np.size(test_signal, axis=0) + n_samples - 1, 2, np.size(mics, axis=0)))
 
@@ -86,8 +86,8 @@ def polar_pattern(mics, angle):
             r=mics,
             s=source,
             # Source position [x y z] (m)
-            L=[5, 5, 3],  # Room dimensions [x y z] (m)
-            reverberation_time=0.6,  # Reverberation time (s)
+            L=[10, 10, 3],  # Room dimensions [x y z] (m)
+            reverberation_time=0.0,  # Reverberation time (s)
             nsample=n_samples,  # Number of output samples
             order=0,  # order of reflections
         )
@@ -114,8 +114,8 @@ def polar_pattern(mics, angle):
 # plt.plot(y)
 # plt.show()
 
-room_d1 = 5
-room_d2 = 5
+room_d1 = 10
+room_d2 = 10
 room_d3 = 3
 mic_d_from_wall = 2.5
 
@@ -130,9 +130,9 @@ mics = np.array([
     ])
 
 [pattern, theta] = polar_pattern(mics, 90)
-# plt.plot(pattern)
-# plt.show()
-
-fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-ax.plot(theta+np.pi, 10*np.log10(pattern/np.max(pattern)))
+plt.plot(theta[250:750], 10*np.log10(pattern[250:750]/np.max(pattern)))
 plt.show()
+
+# fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+# ax.plot(theta, 10*np.log10(pattern/np.max(pattern)))
+# plt.show()
