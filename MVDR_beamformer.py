@@ -130,7 +130,7 @@ if __name__ == "__main__":
         [room_d2/2,  -mic_d+room_d1/2, mic_h]
         ])
 
-    [pattern, theta] = polar_pattern(mics, 90)
+    [pattern, theta] = polar_pattern(mics, 0)
     plt.plot(theta[250:750], 10*np.log10(pattern[250:750]/np.max(pattern)))
     plt.show()
 
