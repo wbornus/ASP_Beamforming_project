@@ -114,25 +114,26 @@ def polar_pattern(mics, angle):
 # plt.plot(y)
 # plt.show()
 
-room_d1 = 10
-room_d2 = 10
-room_d3 = 3
-mic_d_from_wall = 2.5
+if __name__ == "__main__":
+    room_d1 = 10
+    room_d2 = 10
+    room_d3 = 3
+    mic_d_from_wall = 2.5
 
-#mics in front of the table
-# [x, y]
-mic_d = 0.3
-mic_h = 1.2
-mics = np.array([
-    [room_d2/2, mic_d+room_d1/2, mic_h],
-    [room_d2/2,  room_d1/2, mic_h],
-    [room_d2/2,  -mic_d+room_d1/2, mic_h]
-    ])
+    #mics in front of the table
+    # [x, y]
+    mic_d = 0.3
+    mic_h = 1.2
+    mics = np.array([
+        [room_d2/2, mic_d+room_d1/2, mic_h],
+        [room_d2/2,  room_d1/2, mic_h],
+        [room_d2/2,  -mic_d+room_d1/2, mic_h]
+        ])
 
-[pattern, theta] = polar_pattern(mics, 90)
-plt.plot(theta[250:750], 10*np.log10(pattern[250:750]/np.max(pattern)))
-plt.show()
+    [pattern, theta] = polar_pattern(mics, 90)
+    plt.plot(theta[250:750], 10*np.log10(pattern[250:750]/np.max(pattern)))
+    plt.show()
 
-# fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-# ax.plot(theta, 10*np.log10(pattern/np.max(pattern)))
-# plt.show()
+    # fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    # ax.plot(theta, 10*np.log10(pattern/np.max(pattern)))
+    # plt.show()
